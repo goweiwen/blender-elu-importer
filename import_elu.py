@@ -257,7 +257,7 @@ def load_elu_mesh_a(elu, version):
     if mesh_name not in bpy.data.meshes and \
        len(vertices) > 0 and \
        len(faces) > 0:
-        mesh = bpy.data.meshes.new(mesh_name)
+        mesh = bpy.data.meshes.new(name=mesh_name)
 
         mesh.bip_settings.is_bip = bool(is_bip)
         mesh.bip_settings.raw_world_matrix = [x for col in world_matrix.col[:] for x in col]
@@ -289,14 +289,13 @@ def load_elu_mesh_a(elu, version):
 
             mesh.materials.append(material)
 
-            texture = material.active_texture
+            texture_node = material.node_tree.nodes.get("ShaderNodeTexImage")
 
-            if texture is not None and \
-               texture.type == 'IMAGE':
-                image = texture.image
+            if texture_node is not None:
+                image = texture_node.image
 
         if len(uv_faces) > 0:
-            texture_face_layer = mesh.uv_textures.new('z_uv_texture')
+            texture_face_layer = mesh.uv_layers.new(name='z_uv_texture')
 
             #texture_face_layer.active = True
 
@@ -328,61 +327,53 @@ def load_elu_mesh_a(elu, version):
 
                 cloth[2][weight].append(i)
 
-        mesh.show_double_sided = False
-        mesh.show_normal_face = True
-        mesh.show_normal_vertex = True
-
         mesh.calc_normals()
 
         mesh.validate()
 
         mesh.update()
 
-        mesh_object = bpy.data.objects.new(mesh_name, mesh)
+        mesh_object = bpy.data.objects.new(name=mesh_name, object_data=mesh)
 
         if len(vertex_colors) > 0:
-            cloth_modifier = mesh_object.modifiers.new('z_cloth', 'CLOTH')
+            cloth_modifier = mesh_object.modifiers.new(name='z_cloth', type='CLOTH')
 
             cloth_modifier.collision_settings.use_self_collision = True
 
             if len(cloth[0]) > 0:
-                pinning_group = mesh_object.vertex_groups.new('z_cloth_pin')
+                pinning_group = mesh_object.vertex_groups.new(name='z_cloth_pin')
 
                 pinning_group.add(cloth[0], 1.0, 'ADD')
 
-                cloth_modifier.settings.use_pin_cloth = True
                 cloth_modifier.settings.vertex_group_mass = 'Zpin'
 
-            stiff_group = mesh_object.vertex_groups.new('z_cloth_stiff')
+            stiff_group = mesh_object.vertex_groups.new(name='z_cloth_stiff')
 
             for w, v in cloth[2].items():
                 stiff_group.add(v, w, 'ADD')
 
-            cloth_modifier.settings.use_stiffness_scale = True
-            cloth_modifier.settings.structural_stiffness = 0.5
-            cloth_modifier.settings.structural_stiffness_max = 1.0
             cloth_modifier.settings.vertex_group_structural_stiffness = 'z_cloth_stiff'
 
         for i, vertices in enumerate(smooth_groups):
             if len(vertices) > 0:
                 smooth_group_name = "z_smooth.{0:03}".format(i)
 
-                smooth_group = mesh_object.vertex_groups.new(smooth_group_name)
+                smooth_group = mesh_object.vertex_groups.new(name=smooth_group_name)
 
                 smooth_group.add(vertices, 1.0, 'ADD')
 
-                smooth_modifier = mesh_object.modifiers.new(smooth_group_name, 'SMOOTH')
+                smooth_modifier = mesh_object.modifiers.new(name=smooth_group_name, type='SMOOTH')
 
                 smooth_modifier.factor = 0.0
                 smooth_modifier.vertex_group = smooth_group_name
 
         for bone_name, bone_weights in weight_groups.items():
-            weight_group = mesh_object.vertex_groups.new(bone_name)
+            weight_group = mesh_object.vertex_groups.new(name=bone_name)
 
             for bone_weight, vertices in bone_weights.items():
                 weight_group.add(vertices, bone_weight, 'ADD')
     else:
-        mesh_object = bpy.data.objects.new(mesh_name, None) # Empty
+        mesh_object = bpy.data.objects.new(name=mesh_name, object_data=None) # Empty
 
     if mesh_object is not None:
         #mesh_object.show_x_ray = bool(is_bip)
@@ -393,10 +384,9 @@ def load_elu_mesh_a(elu, version):
         mesh_object.matrix_world = world_matrix
 
         scene = bpy.context.scene
+        scene.collection.objects.link(mesh_object)
 
-        scene.objects.link(mesh_object)
-
-        scene.update()
+        bpy.context.view_layer.update()
 
     return mesh_object
 
@@ -650,7 +640,7 @@ def load_elu_mesh_b(elu, version):
     mesh_object = None
 
     if mesh_name not in bpy.data.meshes:
-        mesh = bpy.data.meshes.new(mesh_name)
+        mesh = bpy.data.meshes.new(name=mesh_name)
 
         if mesh is not None:
             mesh.bip_settings.raw_local_matrix = [x for col in local_matrix.col[:] for x in col]
@@ -662,7 +652,7 @@ def load_elu_mesh_b(elu, version):
                 mesh.from_pydata(vertex_positions, [], [f[0] for f in faces])
 
                 if version >= ELU_VERSIONS.x500B:
-                    texture_face_layer = mesh.uv_textures.new('z_uv_texture')
+                    texture_face_layer = mesh.uv_textures.new(name='z_uv_texture')
 
                     for i, texture_face in enumerate(texture_face_layer.data):
                         pass # to-do: set uv image
@@ -714,12 +704,12 @@ def load_elu_mesh_b(elu, version):
 
             mesh.update()
 
-            mesh_object = bpy.data.objects.new(mesh_name, mesh)
+            mesh_object = bpy.data.objects.new(name=mesh_name, object_data=mesh)
 
             if mesh_object is not None:
                 if version > ELU_VERSIONS.x500B:
                     for bone_index, bone_weights in bone_influences.items():
-                        weight_group = mesh_object.vertex_groups.new(str(bone_index))
+                        weight_group = mesh_object.vertex_groups.new(name=str(bone_index))
     
                         for bone_weight, bone_vertices in bone_weights.items():
                             weight_group.add(bone_vertices, bone_weight, 'ADD')
@@ -735,7 +725,7 @@ def load_elu_mesh_b(elu, version):
                 if scene is not None:
                     scene.objects.link(mesh_object)
 
-                    scene.update()
+                    bpy.context.view_layer.update()
     else:
         logging.error("WTF!")
 
@@ -776,7 +766,7 @@ def load_elu_texture(elu, version):
     texture = None
 
     if texture_name0 not in bpy.data.textures:
-        texture = bpy.data.textures.new(texture_name0, 'IMAGE')
+        texture = bpy.data.textures.new(name=texture_name0, type='IMAGE')
 
         texture_image = None
 
@@ -785,7 +775,7 @@ def load_elu_texture(elu, version):
 
             fnames = [texture_name0]
 
-            spaths = [os.path.dirname(elu.name), bpy.context.user_preferences.filepaths.texture_directory]
+            spaths = [os.path.dirname(elu.name), bpy.context.preferences.filepaths.texture_directory]
 
             fpaths = []
 
@@ -794,20 +784,18 @@ def load_elu_texture(elu, version):
                     for spath in spaths:
                         fpath = os.path.join(os.path.normpath(spath), fname + fext)
 
-                        if os.path.exists(fpath) is True:
+                        if os.path.exists(fpath) and os.path.isfile(fpath):
                             fpaths.append(fpath)
 
             if len(fpaths) > 0:
                 texture_image = bpy.data.images.load(fpaths[0])
 
             if texture_image is None:
-                texture_image = bpy.data.images.new(fnames[0], 128, 128)
+                texture_image = bpy.data.images.new(name=fnames[0], width=128, height=128)
         else:
             texture_image = bpy.data.images[image_name0]
 
         if texture_image is not None:
-            texture_image.mapping = 'UV'
-
             texture.image = texture_image
     else:
         texture = bpy.data.textures[texture_name0]
@@ -832,19 +820,11 @@ def load_elu_material(elu, version):
     material = None
     
     if material_name not in bpy.data.materials:
-        material = bpy.data.materials.new(material_name)
+        material = bpy.data.materials.new(name=material_name)
 
-        material.diffuse_color = diffuse_color[:-1]
-        material.alpha = diffuse_color[-1]
+        material.diffuse_color = diffuse_color
         material.specular_color = specular_color[:-1]
-        material.specular_alpha = specular_color[-1]
         material.specular_intensity = specular_power
-
-        material.use_shadeless = True
-        material.use_mist = False
-        material.use_raytrace = False
-        material.use_face_texture = True
-        material.use_face_texture_alpha = True
     else:
         material = bpy.data.materials[material_name]
 
@@ -872,12 +852,14 @@ def load_elu_textured_material(elu, version):
 
     if material is not None and \
        texture is not None:
-        material_texture_slot = material.texture_slots.add()
+        material.use_nodes = True
 
-        material_texture_slot.texture = texture
+        bsdf_node = material.node_tree.nodes["Principled BSDF"]
 
-        material_texture_slot.texture_coords = 'UV'
-        material_texture_slot.uv_layer = 'z_uv_texture'
+        texture_node = material.node_tree.nodes.new("ShaderNodeTexImage")
+        texture_node.image = texture.image
+
+        material.node_tree.links.new(bsdf_node.inputs['Base Color'], texture_node.outputs['Color'])
 
 
 def load_elu(elu, version):
@@ -912,19 +894,20 @@ def load_elu(elu, version):
     scene = bpy.context.scene
 
     if len(bip_mesh_objects) > 0:
-        armature = bpy.data.armatures.new('Armature')
+        armature = bpy.data.armatures.new(name='Armature')
 
         armature.use_mirror_x = False
 
-        armature_object = bpy.data.objects.new('Armature', armature)
+        armature_object = bpy.data.objects.new(name='Armature', object_data=armature)
 
         armature_object.select = True
 
-        scene.objects.link(armature_object)
+        scene.collection.objects.link(armature_object)
 
-        scene.update()
+        layer = bpy.context.view_layer
+        layer.update()
 
-        scene.objects.active = armature_object
+        layer.objects.active = armature_object
 
         bpy.ops.object.mode_set(mode='EDIT')
 
@@ -933,7 +916,7 @@ def load_elu(elu, version):
 
             bone_name = bip_mesh_object.name if version < ELU_VERSIONS.x500E else str(names.index(bip_mesh_object.name))
 
-            edit_bone = armature.edit_bones.new(bone_name)
+            edit_bone = armature.edit_bones.new(name=bone_name)
 
             #edit_bone.use_connected = True
             #edit_bone.use_inherit_rotation = False
@@ -960,7 +943,7 @@ def load_elu(elu, version):
 
                 edit_bone.parent = edit_parent_bone
 
-                bip_sibling_count = sum(int(bip_sibling_mesh_object.data.bip_settings.is_bip) for bip_sibling_mesh_object in bip_mesh_object.parent.children)
+                bip_sibling_count = sum(int(bip_sibling_mesh_object.data.bip_settings.is_bip) for bip_sibling_mesh_object in bip_mesh_object.parent.children if bip_sibling_mesh_object.data is not None)
 
                 if bip_sibling_count == 1:
                     edit_parent_bone.tail = edit_bone.head
@@ -968,14 +951,14 @@ def load_elu(elu, version):
         bpy.ops.object.mode_set(mode='OBJECT')
 
         for z_mesh_object in z_mesh_objects:
-            armature_modifier = z_mesh_object.modifiers.new('z_armature', 'ARMATURE')
+            armature_modifier = z_mesh_object.modifiers.new(name='z_armature', type='ARMATURE')
 
             armature_modifier.object = armature_object
 
             if z_mesh_object.parent is None:
                 z_mesh_object.parent = armature_object
 
-        scene.update()
+        layer.update()
 
 
 def load_from_path(path, context=None):
