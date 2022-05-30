@@ -56,7 +56,7 @@ ELU_FILE_EXTENSION = '*.elu'
 
 
 class BipMeshSettings(bpy.types.PropertyGroup):
-    raw_world_matrix = bpy.props.FloatVectorProperty(
+    raw_world_matrix: bpy.props.FloatVectorProperty(
         name='raw_world_matrix',
         description='Raw World Matrix',
         default=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
@@ -65,7 +65,7 @@ class BipMeshSettings(bpy.types.PropertyGroup):
         subtype='MATRIX'
     )
 
-    raw_local_matrix = bpy.props.FloatVectorProperty(
+    raw_local_matrix: bpy.props.FloatVectorProperty(
         name='raw_local_matrix',
         description='Raw Local Matrix',
         default=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
@@ -74,7 +74,7 @@ class BipMeshSettings(bpy.types.PropertyGroup):
         subtype='MATRIX'
     )
 
-    parent_name = bpy.props.StringProperty(
+    parent_name: bpy.props.StringProperty(
         name="parent_name",
         description="Parent Name",
         default="",
@@ -97,15 +97,15 @@ class ImportELU(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         'UNDO'
     }
 
-    files = bpy.props.CollectionProperty(
+    files: bpy.props.CollectionProperty(
         name='File Path',
         description='File path used for importing the ELU file',
         type=bpy.types.OperatorFileListElement
     )
 
-    directory = bpy.props.StringProperty()
+    directory: bpy.props.StringProperty()
 
-    filter_glob = bpy.props.StringProperty(
+    filter_glob: bpy.props.StringProperty(
         default=ELU_FILE_EXTENSION,
         options={
             'HIDDEN'
